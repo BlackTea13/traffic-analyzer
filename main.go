@@ -5,29 +5,42 @@ import (
 	"net"
 )
 
-func main() {
+const (
+	port int    = 30000
+	IP   string = "127.0.0.1"
+)
+
+func listen() (*net.UDPConn, func()) {
 	addr := net.UDPAddr{
-		Port: 30000,
-		IP:   net.ParseIP("127.0.0.1"),
+		Port: port,
+		IP:   net.ParseIP(IP),
 	}
-	conn, err := net.ListenUDP("udp", &addr) // code does not block here
+
+	conn, err := net.ListenUDP("udp", &addr)
 	if err != nil {
 		log.Panicln(err)
 	}
-	defer conn.Close()
 
+	return conn, func() { conn.Close() }
+}
+
+func read(conn *net.UDPConn) {
 	var buf [1024]byte
 	for {
-		// rlen, remote
-		rlen, remote, err := conn.ReadFromUDP(buf[:])
-
-		// Do stuff with the read bytes
+		rcount, remote, err := conn.ReadFromUDP(buf[:])
 
 		if err != nil {
 			log.Panicln(err)
 		}
 
-		log.Println(rlen, "from", remote.IP)
-
+		// Do stuff with the bytes.
+		log.Println("Read", rcount, "from", remote.IP, remote.Port)
 	}
+}
+
+func main() {
+	conn, close := listen()
+	defer close()
+
+	read(conn)
 }
