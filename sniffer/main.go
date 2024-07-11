@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"github.com/twmb/franz-go/pkg/kadm"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -90,9 +91,15 @@ func (a *Admin) CreateTopic(topic string) {
 }
 
 func main() {
+	var kafkaBrokers string
+	var topic string
 
-	brokers := []string{"localhost:19092"}
-	topic := "sniffed-bytes"
+	// Define flags for command-line arguments
+	flag.StringVar(&kafkaBrokers, "brokers", "localhost:19092", "Kafka brokers")
+	flag.StringVar(&topic, "topic", "sniffed-bytes", "Kafka topic to produce messages to")
+	flag.Parse()
+
+	brokers := []string{kafkaBrokers}
 
 	adminClient, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers...),
