@@ -23,6 +23,7 @@
 
 # Go workspace file
 go.work
+go.work.sum
 
 build
 
@@ -30,4 +31,10 @@ build
 
 # Jetbrain users
 .idea/
+
+# Docker
+docker/
+
+# env file
+.env
 
