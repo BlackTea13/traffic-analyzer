@@ -1,23 +1,12 @@
 package main
 
 import (
-	"context"
+	"common"
 	"flag"
 	"fmt"
-	"github.com/twmb/franz-go/pkg/kadm"
-	"github.com/twmb/franz-go/pkg/kgo"
 	"log"
 	"net"
 )
-
-type Admin struct {
-	client *kadm.Client
-}
-
-type Producer struct {
-	client *kgo.Client
-	topic  string
-}
 
 const (
 	port int    = 30000
@@ -38,7 +27,7 @@ func listen() (*net.UDPConn, func()) {
 	return conn, func() { conn.Close() }
 }
 
-func read(conn *net.UDPConn, p *Producer) {
+func read(conn *net.UDPConn, p *common.Producer) {
 	var buf [1024]byte
 	for {
 		rcount, remote, err := conn.ReadFromUDP(buf[:])
@@ -57,36 +46,7 @@ func read(conn *net.UDPConn, p *Producer) {
 
 		// Produce the message to Kafka
 		// Convert message to bytes
-		p.client.Produce(context.Background(), &kgo.Record{Topic: p.topic, Value: []byte(message)}, nil)
-	}
-}
-
-func (a *Admin) TopicExists(topic string) bool {
-	ctx := context.Background()
-	topicsMetadata, err := a.client.ListTopics(ctx)
-	if err != nil {
-		panic(err)
-	}
-	for _, metadata := range topicsMetadata {
-		if metadata.Topic == topic {
-			return true
-		}
-	}
-	return false
-}
-
-func (a *Admin) CreateTopic(topic string) {
-	ctx := context.Background()
-	resp, err := a.client.CreateTopics(ctx, 1, 1, nil, topic)
-	if err != nil {
-		panic(err)
-	}
-	for _, ctr := range resp {
-		if ctr.Err != nil {
-			fmt.Printf("Unable to create topic '%s': %s", ctr.Topic, ctr.Err)
-		} else {
-			fmt.Printf("Created topic '%s'\n", ctr.Topic)
-		}
+		p.SendMessage([]byte(message))
 	}
 }
 
@@ -101,33 +61,20 @@ func main() {
 
 	brokers := []string{kafkaBrokers}
 
-	adminClient, err := kgo.NewClient(
-		kgo.SeedBrokers(brokers...),
-	)
-	if err != nil {
-		panic(err)
-	}
-	adminKafkaClient := kadm.NewClient(adminClient)
-	admin := &Admin{client: adminKafkaClient}
+	admin := common.NewAdmin(brokers)
 
-	defer admin.client.Close()
+	defer admin.Close()
 
 	if !admin.TopicExists(topic) {
 		admin.CreateTopic(topic)
 	}
 
-	conn, close := listen()
-	defer close()
+	conn, closeListener := listen()
+	defer closeListener()
 
-	producerClient, err := kgo.NewClient(
-		kgo.SeedBrokers(brokers...),
-	)
-	if err != nil {
-		panic(err)
-	}
-	producer := &Producer{client: producerClient, topic: topic}
+	producer := common.NewProducer(brokers, topic)
 
-	defer producer.client.Close()
+	defer producer.Close()
 
 	read(conn, producer)
 
