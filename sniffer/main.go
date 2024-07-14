@@ -24,7 +24,12 @@ func listen() (*net.UDPConn, func()) {
 		log.Panicln(err)
 	}
 
-	return conn, func() { conn.Close() }
+	return conn, func() {
+		err := conn.Close()
+		if err != nil {
+			return
+		}
+	}
 }
 
 func read(conn *net.UDPConn, p *common.Producer) {
