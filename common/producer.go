@@ -3,6 +3,7 @@ package common
 import (
 	"context"
 	"github.com/twmb/franz-go/pkg/kgo"
+	"log"
 )
 
 type Producer struct {
@@ -22,7 +23,11 @@ func NewProducer(brokers []string, topic string) *Producer {
 }
 
 func (p *Producer) SendMessage(message []byte) {
-	p.client.Produce(context.Background(), &kgo.Record{Topic: p.topic, Value: message}, nil)
+	p.client.Produce(context.Background(), &kgo.Record{Topic: p.topic, Value: message}, func(r *kgo.Record, err error) {
+		if err != nil {
+			log.Printf("Failed to send message to Kafka topic %s: %v", p.topic, err)
+		}
+	})
 }
 
 func (p *Producer) Close() {

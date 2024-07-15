@@ -2,13 +2,14 @@ package internal
 
 import (
 	"common"
+	"encoding/json"
 	"fmt"
 	"github.com/cs-muic/goms-2023-t3-pj-traffic-analyzer-kra/sniffer"
 	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 	"github.com/google/gopacket/pcap"
 	"log"
-	"net"
+	"strings"
 )
 
 func Sniff() {
@@ -32,30 +33,64 @@ func Sniff() {
 func sendPacket(packet gopacket.Packet) {
 	ipLayer := packet.Layer(layers.LayerTypeIPv4)
 	if ipLayer == nil {
-		log.Panicln("Packet has no IP layer")
+		_ = fmt.Errorf("packet has no IP layer")
 		return
+	}
+
+	tcpLayer := packet.Layer(layers.LayerTypeTCP)
+	udpLayer := packet.Layer(layers.LayerTypeUDP)
+
+	if tcpLayer == nil && udpLayer == nil {
+		_ = fmt.Errorf("Packet has no TCP or UDP layer")
+		return
+	}
+
+	var networkPacket Packet
+	if udpLayer != nil {
+		networkPacket = handleUDP(ipLayer, udpLayer)
+	}
+	if tcpLayer != nil {
+		networkPacket = handleTCP(ipLayer, tcpLayer)
+	}
+
+	producer := common.NewProducer([]string{sniffer.KafkaBroker}, sniffer.TopicName)
+
+	jsonString, err := json.Marshal(networkPacket)
+	if err != nil {
+		_ = fmt.Errorf("Marshal Error")
+	}
+
+	producer.SendMessage(jsonString)
+}
+
+func handleUDP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) Packet {
+	ip, _ := ipLayer.(*layers.IPv4)
+	transport, _ := transportLayer.(*layers.UDP)
+	return Packet{
+		SrcIp:    ip.SrcIP.String(),
+		SrcPort:  cleanPort(transport.SrcPort.String()),
+		DestIp:   ip.DstIP.String(),
+		DestPort: cleanPort(transport.DstPort.String()),
+		Size:     ip.Length,
 	}
 }
 
-func read(conn *net.UDPConn, p *common.Producer) {
-	var buf [1024]byte
-	for {
-		rcount, remote, err := conn.ReadFromUDP(buf[:])
-
-		if err != nil {
-			log.Panicln(err)
-		}
-
-		// Do stuff with the bytes.
-		log.Println("Read", rcount, "bytes from", sniffer.IP, sniffer.Port)
-
-		// Construct the message
-		message := fmt.Sprintf("rcount: %d, IP: %s, Port: %d", rcount, remote.IP.String(), remote.Port)
-
-		log.Println(message)
-
-		// Produce the message to Kafka
-		// Convert message to bytes
-		p.SendMessage([]byte(message))
+func handleTCP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) Packet {
+	ip, _ := ipLayer.(*layers.IPv4)
+	transport, _ := transportLayer.(*layers.TCP)
+	return Packet{
+		SrcIp:    ip.SrcIP.String(),
+		SrcPort:  cleanPort(transport.SrcPort.String()),
+		DestIp:   ip.DstIP.String(),
+		DestPort: cleanPort(transport.DstPort.String()),
+		Size:     ip.Length,
 	}
+}
+
+func cleanPort(port string) string {
+	if strings.Contains(port, "(") {
+		parts := strings.Split(port, "(")
+		return parts[0]
+	}
+	return port
 }

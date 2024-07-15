@@ -12,7 +12,7 @@ func ConnectToKafka() {
 
 	// Define flags for command-line arguments
 	flag.StringVar(&kafkaBrokers, "brokers", sniffer.KafkaBroker, "Kafka brokers")
-	flag.StringVar(&topic, "topic", "sniffed-bytes", "Kafka topic to produce messages to")
+	flag.StringVar(&topic, "topic", sniffer.TopicName, "Kafka topic to send packets to")
 	flag.Parse()
 
 	brokers := []string{kafkaBrokers}
@@ -24,4 +24,5 @@ func ConnectToKafka() {
 	if !admin.TopicExists(topic) {
 		admin.CreateTopic(topic)
 	}
+
 }
