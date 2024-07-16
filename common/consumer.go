@@ -25,14 +25,19 @@ func NewConsumer(brokers []string, topic string) *Consumer {
 	return &Consumer{client: client, topic: topic}
 }
 
-func (c *Consumer) ConsumeMessages() {
+func printMessage(record *kgo.Record) {
+	fmt.Printf("%s\n", record.Value)
+}
+
+func (c *Consumer) ConsumeMessages(f func(record *kgo.Record)) {
 	ctx := context.Background()
 	for {
 		fetches := c.client.PollFetches(ctx)
 		iter := fetches.RecordIter()
 		for !iter.Done() {
 			record := iter.Next()
-			fmt.Printf("%s\n", record.Value)
+			printMessage(record)
+			f(record)
 		}
 	}
 }
