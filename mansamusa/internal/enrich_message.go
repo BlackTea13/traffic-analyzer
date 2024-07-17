@@ -49,7 +49,7 @@ func extractIPInfo(ip net.IP, port string) common.EnrichedIP {
 
 }
 
-func enrichMessage(record *kgo.Record) {
+func enrichPacket(record *kgo.Record) {
 
 	// For testing purposes
 	//mockedMessage := common.Packet{
@@ -67,7 +67,7 @@ func enrichMessage(record *kgo.Record) {
 	//}
 
 	var msg common.Packet
-	err := json.Unmarshal(record.Value, &msg) // Use the JSON string
+	err := json.Unmarshal(record.Value, &msg)
 	if err != nil {
 		log.Printf("Error unmarshalling JSON: %v\n", err)
 		return
@@ -90,7 +90,7 @@ func enrichMessage(record *kgo.Record) {
 
 }
 
-func EnrichMessage(kafkaBrokers string, consumeTopic string, produceTopic string) {
+func Mansamusa(kafkaBrokers string, consumeTopic string, produceTopic string) {
 
 	brokers := []string{kafkaBrokers}
 
@@ -121,6 +121,6 @@ func EnrichMessage(kafkaBrokers string, consumeTopic string, produceTopic string
 	p = common.NewProducer(brokers, produceTopic)
 	defer p.Close()
 
-	consumer.ConsumeMessages(enrichMessage)
+	consumer.ConsumeMessages(enrichPacket)
 
 }

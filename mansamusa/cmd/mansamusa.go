@@ -17,6 +17,6 @@ func main() {
 	flag.Parse()
 
 	internal.ConnectToKafka(kafkaBrokers, consumeTopic, produceTopic)
-	internal.EnrichMessage(kafkaBrokers, consumeTopic, produceTopic)
+	internal.Mansamusa(kafkaBrokers, consumeTopic, produceTopic)
 
 }
