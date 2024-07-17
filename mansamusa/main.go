@@ -11,14 +11,6 @@ import (
 	"net"
 )
 
-type SniffedMessage struct {
-	SrcIp    string
-	SrcPort  string
-	DestIp   string
-	DestPort string
-	Size     int
-}
-
 type EnrichedIP struct {
 	CountryName     string
 	CityName        string
@@ -32,7 +24,7 @@ type EnrichedIP struct {
 type EnrichedMessage struct {
 	SourceIP EnrichedIP
 	DestIP   EnrichedIP
-	Size     int
+	Size     uint16
 }
 
 // Global variables for GeoIP databases
@@ -76,17 +68,18 @@ func extractIPInfo(ip net.IP, port string) EnrichedIP {
 
 func enrichMessage(record *kgo.Record) {
 	//
-	//{
-	//	"SrcIp": "192.168.64.1",
-	//	"SrcPort": "53(domain)",
-	//	"DestIp": "192.168.74.7",
-	//	"DestPort": "54119",
-	//	"Size": 546
-	//}
+	mockedMessage := common.Packet{SrcIp: "192.168.64.1", SrcPort: "53", DestIp: "192.168.74.7", DestPort: "54119", Size: 546}
 	//message := string(record.Value)
 
-	var msg SniffedMessage
-	err := json.Unmarshal(record.Value, &msg)
+	messageBytes, err1 := json.Marshal(mockedMessage)
+	if err1 != nil {
+		// Handle the error appropriately
+		fmt.Printf("Error marshalling message to JSON: %s\n", err1)
+		return
+	}
+
+	var msg common.Packet
+	err := json.Unmarshal(record.Value, &messageBytes)
 	if err != nil {
 		log.Printf("Error unmarshalling JSON: %v\n", err)
 		return
@@ -121,6 +114,18 @@ func main() {
 	flag.Parse()
 
 	brokers := []string{kafkaBrokers}
+
+	admin := common.NewAdmin(brokers)
+
+	defer admin.Close()
+
+	if !admin.TopicExists(consumeTopic) {
+		admin.CreateTopic(consumeTopic)
+	}
+
+	if !admin.TopicExists(produceTopic) {
+		admin.CreateTopic(produceTopic)
+	}
 
 	consumer := common.NewConsumer(brokers, consumeTopic)
 

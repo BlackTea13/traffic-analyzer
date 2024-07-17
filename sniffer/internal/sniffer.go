@@ -41,11 +41,11 @@ func sendPacket(packet gopacket.Packet) {
 	udpLayer := packet.Layer(layers.LayerTypeUDP)
 
 	if tcpLayer == nil && udpLayer == nil {
-		_ = fmt.Errorf("Packet has no TCP or UDP layer")
+		_ = fmt.Errorf("packet has no TCP or UDP layer")
 		return
 	}
 
-	var networkPacket Packet
+	var networkPacket common.Packet
 	if udpLayer != nil {
 		networkPacket = handleUDP(ipLayer, udpLayer)
 	}
@@ -57,16 +57,16 @@ func sendPacket(packet gopacket.Packet) {
 
 	jsonString, err := json.Marshal(networkPacket)
 	if err != nil {
-		_ = fmt.Errorf("Marshal Error")
+		_ = fmt.Errorf("marshal Error")
 	}
 
 	producer.SendMessage(jsonString)
 }
 
-func handleUDP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) Packet {
+func handleUDP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) common.Packet {
 	ip, _ := ipLayer.(*layers.IPv4)
 	transport, _ := transportLayer.(*layers.UDP)
-	return Packet{
+	return common.Packet{
 		SrcIp:    ip.SrcIP.String(),
 		SrcPort:  cleanPort(transport.SrcPort.String()),
 		DestIp:   ip.DstIP.String(),
@@ -75,10 +75,10 @@ func handleUDP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) Packet {
 	}
 }
 
-func handleTCP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) Packet {
+func handleTCP(ipLayer gopacket.Layer, transportLayer gopacket.Layer) common.Packet {
 	ip, _ := ipLayer.(*layers.IPv4)
 	transport, _ := transportLayer.(*layers.TCP)
-	return Packet{
+	return common.Packet{
 		SrcIp:    ip.SrcIP.String(),
 		SrcPort:  cleanPort(transport.SrcPort.String()),
 		DestIp:   ip.DstIP.String(),
