@@ -56,25 +56,8 @@ services:
       - 8080:8080
     depends_on:
       - redpanda-0
-  influxdb:
-    image: influxdb:latest
-    ports:
-      - "8086:8086"
-    volumes:
-      - ./docker/influxdb:/var/lib/influxdb2
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_AUTH_ANONYMOUS_ENABLED=true
-      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
-    volumes:
-      - ./docker/grafana:/var/lib/grafana
 
 volumes:
-  influxdb-storage:
-  grafana-storage:
   redpanda-0: null
 
 networks:

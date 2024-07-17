@@ -34,5 +34,6 @@ docker/
 # env file
 .env
 
-# .DS_Store from mac
+# mac os
 .DS_Store
+
