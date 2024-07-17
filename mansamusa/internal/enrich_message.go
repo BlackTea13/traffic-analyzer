@@ -1,9 +1,8 @@
-package main
+package internal
 
 import (
 	"common"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"github.com/oschwald/geoip2-golang"
 	"github.com/twmb/franz-go/pkg/kgo"
@@ -11,29 +10,12 @@ import (
 	"net"
 )
 
-type EnrichedIP struct {
-	CountryName     string
-	CityName        string
-	PostalCode      string
-	ASNOrganisation string
-	Latitude        float64
-	Longitude       float64
-	Port            string
-}
-
-type EnrichedMessage struct {
-	SourceIP EnrichedIP
-	DestIP   EnrichedIP
-	Size     uint16
-}
-
-// Global variables for GeoIP databases
 var dbCountry *geoip2.Reader
 var dbASN *geoip2.Reader
 var dbCity *geoip2.Reader
 var p *common.Producer
 
-func extractIPInfo(ip net.IP, port string) EnrichedIP {
+func extractIPInfo(ip net.IP, port string) common.EnrichedIP {
 
 	// Get country information
 	countryRecord, err := dbCountry.Country(ip)
@@ -53,12 +35,13 @@ func extractIPInfo(ip net.IP, port string) EnrichedIP {
 		log.Panicln(err)
 	}
 
-	fmt.Printf("Dest: Country name: %s, City name: %s, Postal code: %s, ASN: %s Latitude: %f, Longitude: %f\n", countryRecord.Country.Names["en"], cityRecord.City.Names["en"], cityRecord.Postal.Code, asnRecord.AutonomousSystemOrganization, cityRecord.Location.Latitude, cityRecord.Location.Longitude)
-	return EnrichedIP{
+	fmt.Printf("Dest: Country name: %s, City name: %s, Postal code: %s, ASNCode: %d, ASNOrg: %s Latitude: %f, Longitude: %f\n", countryRecord.Country.Names["en"], cityRecord.City.Names["en"], cityRecord.Postal.Code, asnRecord.AutonomousSystemNumber, asnRecord.AutonomousSystemOrganization, cityRecord.Location.Latitude, cityRecord.Location.Longitude)
+	return common.EnrichedIP{
 		CountryName:     countryRecord.Country.Names["en"],
 		CityName:        cityRecord.City.Names["en"],
 		PostalCode:      cityRecord.Postal.Code,
 		ASNOrganisation: asnRecord.AutonomousSystemOrganization,
+		ASNCode:         asnRecord.AutonomousSystemNumber,
 		Latitude:        cityRecord.Location.Latitude,
 		Longitude:       cityRecord.Location.Longitude,
 		Port:            port,
@@ -67,19 +50,24 @@ func extractIPInfo(ip net.IP, port string) EnrichedIP {
 }
 
 func enrichMessage(record *kgo.Record) {
-	//
-	mockedMessage := common.Packet{SrcIp: "192.168.64.1", SrcPort: "53", DestIp: "192.168.74.7", DestPort: "54119", Size: 546}
-	//message := string(record.Value)
 
-	messageBytes, err1 := json.Marshal(mockedMessage)
-	if err1 != nil {
-		// Handle the error appropriately
-		fmt.Printf("Error marshalling message to JSON: %s\n", err1)
-		return
-	}
+	// For testing purposes
+	//mockedMessage := common.Packet{
+	//	SrcIp:    "125.18.13.226",
+	//	SrcPort:  "53",
+	//	DestIp:   "31.173.147.178",
+	//	DestPort: "54119",
+	//	Size:     546,
+	//}
+	//
+	//mockedMessageJSON, err := json.Marshal(mockedMessage)
+	//if err != nil {
+	//	log.Printf("Error marshalling mockedMessage to JSON: %v\n", err)
+	//	return
+	//}
 
 	var msg common.Packet
-	err := json.Unmarshal(record.Value, &messageBytes)
+	err := json.Unmarshal(record.Value, &msg) // Use the JSON string
 	if err != nil {
 		log.Printf("Error unmarshalling JSON: %v\n", err)
 		return
@@ -91,7 +79,7 @@ func enrichMessage(record *kgo.Record) {
 	enrichedSrcIP := extractIPInfo(srcIP, msg.SrcPort)
 	enrichedDestIP := extractIPInfo(destIP, msg.DestPort)
 
-	enrichedMessage := EnrichedMessage{enrichedSrcIP, enrichedDestIP, msg.Size}
+	enrichedMessage := common.EnrichedPacket{SourceIP: enrichedSrcIP, DestIP: enrichedDestIP, Size: msg.Size}
 
 	jsonString, err := json.Marshal(enrichedMessage)
 	if err != nil {
@@ -102,30 +90,9 @@ func enrichMessage(record *kgo.Record) {
 
 }
 
-func main() {
-	var kafkaBrokers string
-	var consumeTopic string
-	var produceTopic string
-
-	// Define flags for command-line arguments
-	flag.StringVar(&kafkaBrokers, "brokers", "localhost:19092", "Kafka brokers")
-	flag.StringVar(&consumeTopic, "consume-topic", "sniffed-bytes", "Kafka topic to consume messages from")
-	flag.StringVar(&produceTopic, "produce-topic", "enriched-packets", "Kafka topic to produce messages to")
-	flag.Parse()
+func EnrichMessage(kafkaBrokers string, consumeTopic string, produceTopic string) {
 
 	brokers := []string{kafkaBrokers}
-
-	admin := common.NewAdmin(brokers)
-
-	defer admin.Close()
-
-	if !admin.TopicExists(consumeTopic) {
-		admin.CreateTopic(consumeTopic)
-	}
-
-	if !admin.TopicExists(produceTopic) {
-		admin.CreateTopic(produceTopic)
-	}
 
 	consumer := common.NewConsumer(brokers, consumeTopic)
 
