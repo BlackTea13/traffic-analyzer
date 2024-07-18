@@ -80,7 +80,7 @@ func enrichPacket(record *kgo.Record) {
 	enrichedSrcIP := extractIPInfo(srcIP, msg.SrcPort)
 	enrichedDestIP := extractIPInfo(destIP, msg.DestPort)
 
-	layout := "2006-01-02 15:04:05"
+	layout := "2006-01-02 15:04:05.000000000 MST"
 	date, err := time.Parse(layout, msg.TimeStamp)
 
 	if err != nil {
