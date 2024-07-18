@@ -6,4 +6,5 @@ type Packet struct {
 	DestIp   string
 	DestPort string
 	Size     uint16
+	TimeStamp string
 }
