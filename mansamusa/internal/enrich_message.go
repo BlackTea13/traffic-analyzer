@@ -8,6 +8,7 @@ import (
 	"github.com/twmb/franz-go/pkg/kgo"
 	"log"
 	"net"
+	"time"
 )
 
 var dbCountry *geoip2.Reader
@@ -79,7 +80,15 @@ func enrichPacket(record *kgo.Record) {
 	enrichedSrcIP := extractIPInfo(srcIP, msg.SrcPort)
 	enrichedDestIP := extractIPInfo(destIP, msg.DestPort)
 
-	enrichedMessage := common.EnrichedPacket{SourceIP: enrichedSrcIP, DestIP: enrichedDestIP, Size: msg.Size}
+	layout := "2006-01-02 15:04:05"
+	date, err := time.Parse(layout, msg.TimeStamp)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	enrichedMessage := common.EnrichedPacket{SourceIP: enrichedSrcIP, DestIP: enrichedDestIP, Size: msg.Size, TimeStamp: date}
 
 	jsonString, err := json.Marshal(enrichedMessage)
 	if err != nil {
