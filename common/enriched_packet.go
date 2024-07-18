@@ -1,5 +1,7 @@
 package common
 
+import "time"
+
 type EnrichedIP struct {
 	CountryName     string
 	CityName        string
@@ -12,7 +14,8 @@ type EnrichedIP struct {
 }
 
 type EnrichedPacket struct {
-	SourceIP EnrichedIP
-	DestIP   EnrichedIP
-	Size     uint16
+	SourceIP  EnrichedIP
+	DestIP    EnrichedIP
+	Size      uint32
+	TimeStamp time.Time
 }
