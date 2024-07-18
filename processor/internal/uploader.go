@@ -2,7 +2,6 @@ package internal
 
 import (
 	"common"
-	"context"
 	"log"
 	"strconv"
 
@@ -16,9 +15,10 @@ import (
 )
 
 type Uploader struct {
-	Consumer *common.Consumer
-	Client   influxdb2.Client
-	WriteAPI api.WriteAPIBlocking
+	Consumer     *common.Consumer
+	Client       influxdb2.Client
+	WriteAPI     api.WriteAPI
+	ErrorChannel <-chan error
 }
 
 func (u *Uploader) Upload(record *kgo.Record) {
@@ -79,19 +79,21 @@ func (u *Uploader) Upload(record *kgo.Record) {
 			"size":                  packet.Size,
 		},
 		time.Now())
-	err := u.WriteAPI.WritePoint(context.Background(), p)
-	if err != nil {
-		log.Printf("Error writing to influxdb: %v\n", err)
-		return
-	}
-	err = u.WriteAPI.Flush(context.Background())
-	if err != nil {
-		log.Printf("Error flushing influxdb: %v\n", err)
-		return
-	}
+	u.WriteAPI.WritePoint(p)
 }
 
 func (u *Uploader) Run() {
+	go func() {
+		for err := range u.ErrorChannel {
+			fmt.Printf("Write error: %s\n", err.Error())
+		}
+	}()
+	go func() {
+		for {
+			time.Sleep(5 * time.Second)
+			u.WriteAPI.Flush()
+		}
+	}()
 	u.Consumer.ConsumeMessages(u.Upload)
 }
 
@@ -102,10 +104,12 @@ func (u *Uploader) Close() {
 
 func NewUploader(brokers []string, topic string, dbAddress string) *Uploader {
 	client := influxdb2.NewClient(dbAddress, "secret")
+	writeApi := client.WriteAPI("ark", "bucket")
 	return &Uploader{
-		Consumer: common.NewConsumer(brokers, topic),
-		Client:   client,
-		WriteAPI: client.WriteAPIBlocking("ark", "bucket"),
+		Consumer:     common.NewConsumer(brokers, topic),
+		Client:       client,
+		WriteAPI:     writeApi,
+		ErrorChannel: writeApi.Errors(),
 	}
 }
 
