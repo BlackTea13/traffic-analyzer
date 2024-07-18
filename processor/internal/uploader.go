@@ -4,15 +4,14 @@ import (
 	"common"
 	"context"
 	"log"
+	"strconv"
 
-	// "encoding/json"
-	// "fmt"
-	// "log"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
-	"github.com/influxdata/influxdb-client-go/v2/api/write"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -23,18 +22,73 @@ type Uploader struct {
 }
 
 func (u *Uploader) Upload(record *kgo.Record) {
-	// var packet common.EnrichedPacket
-	// err := json.Unmarshal(record.Value, &packet)
-	// if err != nil {
-	// 	log.Printf("Error unmarshalling JSON: %v\n", err)
-	// 	return
-	// }
-	p := influxdb2.NewPoint("stat",
-		map[string]string{"unit": "temperature"},
-		map[string]interface{}{"avg": 24.5, "max": 45},
+	var packet common.EnrichedPacket
+
+	// Just for testing...
+	if record == nil {
+		packet = common.EnrichedPacket{
+			SourceIP: common.EnrichedIP{
+				CountryName:     "Thailand",
+				CityName:        "Phuket",
+				PostalCode:      "83000",
+				ASNOrganisation: "IDK",
+				ASNCode:         666,
+				Latitude:        213,
+				Longitude:       12,
+				Port:            "4000",
+			},
+			DestIP: common.EnrichedIP{
+				CountryName:     "India",
+				CityName:        "Idk",
+				PostalCode:      "66666",
+				ASNOrganisation: "IDK",
+				ASNCode:         13124,
+				Latitude:        5213,
+				Longitude:       52,
+				Port:            "1235",
+			},
+			Size: 1337,
+		}
+	} else {
+		err := json.Unmarshal(record.Value, &packet)
+		if err != nil {
+			log.Printf("Error unmarshalling JSON: %v\n", err)
+			return
+		}
+	}
+	p := influxdb2.NewPoint("packet",
+		map[string]string{
+			"source_city":                 packet.SourceIP.CityName,
+			"source_country":              packet.SourceIP.CountryName,
+			"source_postal_code":          packet.SourceIP.PostalCode,
+			"source_asnorganisation":      packet.SourceIP.ASNOrganisation,
+			"source_port":                 packet.SourceIP.Port,
+			"destination_city":            packet.DestIP.CityName,
+			"destination_country":         packet.DestIP.CountryName,
+			"destination_postal_code":     packet.DestIP.PostalCode,
+			"destination_asnorganisation": packet.DestIP.ASNOrganisation,
+			"destination_port":            packet.DestIP.Port,
+			"source_asncode":              strconv.Itoa(int(packet.SourceIP.ASNCode)),
+			"destination_asncode":         strconv.Itoa(int(packet.DestIP.ASNCode)),
+		},
+		map[string]interface{}{
+			"source_latitude":       packet.SourceIP.Latitude,
+			"source_longitude":      packet.SourceIP.Longitude,
+			"destination_latitude":  packet.DestIP.Latitude,
+			"destination_longitude": packet.DestIP.Longitude,
+			"size":                  packet.Size,
+		},
 		time.Now())
-	u.WriteAPI.WritePoint(context.Background(), p)
-	u.WriteAPI.Flush(context.Background())
+	err := u.WriteAPI.WritePoint(context.Background(), p)
+	if err != nil {
+		log.Printf("Error writing to influxdb: %v\n", err)
+		return
+	}
+	err = u.WriteAPI.Flush(context.Background())
+	if err != nil {
+		log.Printf("Error flushing influxdb: %v\n", err)
+		return
+	}
 }
 
 func (u *Uploader) Run() {
@@ -51,31 +105,14 @@ func NewUploader(brokers []string, topic string, dbAddress string) *Uploader {
 	return &Uploader{
 		Consumer: common.NewConsumer(brokers, topic),
 		Client:   client,
-		WriteAPI: client.WriteAPIBlocking("org", "bucket"),
+		WriteAPI: client.WriteAPIBlocking("ark", "bucket"),
 	}
 }
 
 func InfluxPenetrator(kafkaBrokers string, consumeTopic string, dbAddress string) {
 	uploader := NewUploader([]string{kafkaBrokers}, consumeTopic, dbAddress)
-	// fmt.Println("Influx Penetrator starting up...")
-	// uploader.Upload(nil)
-	// uploader.Run()
-	// defer uploader.Close()
-	org := "ark"
-	bucket := "bucket"
-	writeAPI := uploader.Client.WriteAPIBlocking(org, bucket)
-	for value := 0; value < 5; value++ {
-		tags := map[string]string{
-			"tagname1": "tagvalue1",
-		}
-		fields := map[string]interface{}{
-			"field1": value,
-		}
-		point := write.NewPoint("measurement1", tags, fields, time.Now())
-		time.Sleep(1 * time.Second) // separate points by 1 second
-
-		if err := writeAPI.WritePoint(context.Background(), point); err != nil {
-			log.Fatal(err)
-		}
-	}
+	fmt.Println("Influx Penetrator starting up...")
+	uploader.Upload(nil)
+	uploader.Run()
+	defer uploader.Close()
 }
