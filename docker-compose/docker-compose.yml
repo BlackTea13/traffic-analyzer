@@ -1,0 +1,4 @@
+include:
+  - grafana.yml
+  - influxdb.yml
+  - redpanda.yml
