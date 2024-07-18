@@ -3,13 +3,16 @@ package internal
 import (
 	"common"
 	"context"
+	"log"
+
 	// "encoding/json"
-	"fmt"
+	// "fmt"
 	// "log"
 	"time"
 
 	"github.com/influxdata/influxdb-client-go/v2"
 	"github.com/influxdata/influxdb-client-go/v2/api"
+	"github.com/influxdata/influxdb-client-go/v2/api/write"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -44,7 +47,7 @@ func (u *Uploader) Close() {
 }
 
 func NewUploader(brokers []string, topic string, dbAddress string) *Uploader {
-	client := influxdb2.NewClient(dbAddress, "replace-me-later")
+	client := influxdb2.NewClient(dbAddress, "secret")
 	return &Uploader{
 		Consumer: common.NewConsumer(brokers, topic),
 		Client:   client,
@@ -54,9 +57,25 @@ func NewUploader(brokers []string, topic string, dbAddress string) *Uploader {
 
 func InfluxPenetrator(kafkaBrokers string, consumeTopic string, dbAddress string) {
 	uploader := NewUploader([]string{kafkaBrokers}, consumeTopic, dbAddress)
-	fmt.Println("Influx Penetrator starting up...")
-	uploader.Upload(nil)
+	// fmt.Println("Influx Penetrator starting up...")
+	// uploader.Upload(nil)
 	// uploader.Run()
 	// defer uploader.Close()
+	org := "ark"
+	bucket := "bucket"
+	writeAPI := uploader.Client.WriteAPIBlocking(org, bucket)
+	for value := 0; value < 5; value++ {
+		tags := map[string]string{
+			"tagname1": "tagvalue1",
+		}
+		fields := map[string]interface{}{
+			"field1": value,
+		}
+		point := write.NewPoint("measurement1", tags, fields, time.Now())
+		time.Sleep(1 * time.Second) // separate points by 1 second
 
+		if err := writeAPI.WritePoint(context.Background(), point); err != nil {
+			log.Fatal(err)
+		}
+	}
 }

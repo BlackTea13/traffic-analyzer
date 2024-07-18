@@ -4,13 +4,12 @@ services:
     ports:
       - "8086:8086"
     volumes:
-      - ./docker/influxdb:/var/lib/influxdb2
+      - /traffic_processor/influxdb:/var/lib/influxdb
     environment:
      - DOCKER_INFLUXDB_INIT_MODE=setup
      - DOCKER_INFLUXDB_INIT_USERNAME=admin
      - DOCKER_INFLUXDB_INIT_PASSWORD=password 
      - DOCKER_INFLUXDB_INIT_ORG=ark 
      - DOCKER_INFLUXDB_INIT_BUCKET=bucket 
-volumes:
-  influxdb-storage:
+     - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=secret
 

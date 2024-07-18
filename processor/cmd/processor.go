@@ -13,7 +13,7 @@ func main() {
 
 	flag.StringVar(&kafkaBrokers, "brokers", "localhost:19092", "Kafka brokers")
 	flag.StringVar(&consumeTopic, "consume-topic", "enriched-packets", "Kafka topic to consume messages from")
-	flag.StringVar(&dbServerAddress, "db-server", "localhost:8086", "InfluxDB server address")
+	flag.StringVar(&dbServerAddress, "db-server", "http://localhost:8086", "InfluxDB server address")
 	flag.Parse()
 
 	internal.ConnectToKafka(kafkaBrokers, consumeTopic)
