@@ -80,11 +80,15 @@ impl TryFrom<IPFix> for Packet {
                         IPFixField::SourceIpv4address => {
                             if let FieldValue::Ip4Addr(addr) = value {
                                 src_addr = addr.to_string();
+                            } else {
+                                return Err(anyhow!("Only IPv4 addresses are supported"));
                             }
                         }
                         IPFixField::DestinationIpv4address => {
                             if let FieldValue::Ip4Addr(addr) = value {
                                 dst_addr = addr.to_string();
+                            } else {
+                                return Err(anyhow!("Only IPv4 addresses are supported"));
                             }
                         }
                         IPFixField::SourceTransportPort => {
@@ -94,7 +98,7 @@ impl TryFrom<IPFix> for Packet {
                                     DataNumber::U16(port) => port.to_string(),
                                     DataNumber::U24(port) => (port as u16).to_string(),
                                     DataNumber::U32(port) => (port as u32).to_string(),
-                                    _ => String::new(),
+                                    _ => return Err(anyhow!("Data number not supported")),
                                 };
                             }
                         }
@@ -105,7 +109,9 @@ impl TryFrom<IPFix> for Packet {
                                     DataNumber::U16(port) => port.to_string(),
                                     DataNumber::U24(port) => (port as u16).to_string(),
                                     DataNumber::U32(port) => (port as u32).to_string(),
-                                    _ => String::new(),
+                                    _ => {
+                                        return Err(anyhow!("Data number not supported"));
+                                    }
                                 };
                             }
                         }
@@ -117,7 +123,9 @@ impl TryFrom<IPFix> for Packet {
                                     DataNumber::U24(value) => value as i32,
                                     DataNumber::U32(value) => value as i32,
                                     DataNumber::I32(value) => value,
-                                    _ => 0, // Other numeric types are not expected for packet size
+                                    _ => {
+                                        return Err(anyhow!("Data number not supported"));
+                                    }
                                 }
                             }
                         }
