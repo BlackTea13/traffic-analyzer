@@ -47,7 +47,8 @@ func (u *Uploader) Upload(record *kgo.Record) {
 				Longitude:       52,
 				Port:            "1235",
 			},
-			Size: 1337,
+			Size:      1337,
+			TimeStamp: time.Now(),
 		}
 	} else {
 		err := json.Unmarshal(record.Value, &packet)
@@ -78,7 +79,7 @@ func (u *Uploader) Upload(record *kgo.Record) {
 			"destination_longitude": packet.DestIP.Longitude,
 			"size":                  packet.Size,
 		},
-		time.Now())
+		packet.TimeStamp)
 	u.WriteAPI.WritePoint(p)
 }
 
