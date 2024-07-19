@@ -3,7 +3,6 @@ package common
 import (
 	"context"
 	"fmt"
-	"github.com/google/uuid"
 	"github.com/twmb/franz-go/pkg/kgo"
 )
 
@@ -12,11 +11,10 @@ type Consumer struct {
 	topic  string
 }
 
-func NewConsumer(brokers []string, topic string) *Consumer {
-	groupID := uuid.New().String()
+func NewConsumer(brokers []string, groupName string, topic string) *Consumer {
 	client, err := kgo.NewClient(
 		kgo.SeedBrokers(brokers...),
-		kgo.ConsumerGroup(groupID),
+		kgo.ConsumerGroup(groupName),
 		kgo.ConsumeTopics(topic),
 	)
 	if err != nil {

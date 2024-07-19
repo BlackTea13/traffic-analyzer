@@ -107,7 +107,7 @@ func NewUploader(brokers []string, topic string, dbAddress string) *Uploader {
 	client := influxdb2.NewClient(dbAddress, "secret")
 	writeApi := client.WriteAPI("ark", "bucket")
 	return &Uploader{
-		Consumer:     common.NewConsumer(brokers, topic),
+		Consumer:     common.NewConsumer(brokers, "processor", topic),
 		Client:       client,
 		WriteAPI:     writeApi,
 		ErrorChannel: writeApi.Errors(),
