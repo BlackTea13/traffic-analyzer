@@ -1,7 +1,6 @@
 package internal
 
 import (
-	"math/rand"
 	"common"
 	"encoding/json"
 	"fmt"
@@ -81,22 +80,22 @@ func enrichPacket(record *kgo.Record) {
 	enrichedSrcIP := extractIPInfo(srcIP, msg.SrcPort)
 	enrichedDestIP := extractIPInfo(destIP, msg.DestPort)
 
-	// layout := "2006-01-02 15:04:05.000000000 MST"
-	// date, err := time.Parse(layout, msg.TimeStamp)
+	layout := "2006-01-02 15:04:05.000000000 MST"
+	date, err := time.Parse(layout, msg.TimeStamp)
 
-	min := time.Date(2024, 2, 0, 0, 0, 0, 0, time.UTC).Unix()
-	max := time.Date(2024, 3, 0, 0, 0, 0, 0, time.UTC).Unix()
-	delta := max - min
-
-	sec := rand.Int63n(delta) + min
-	time := time.Unix(sec, 0)
+	// min := time.Date(2024, 2, 0, 0, 0, 0, 0, time.UTC).Unix()
+	// max := time.Date(2024, 3, 0, 0, 0, 0, 0, time.UTC).Unix()
+	// delta := max - min
+	//
+	// sec := rand.Int63n(delta) + min
+	// time := time.Unix(sec, 0)
 
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	enrichedMessage := common.EnrichedPacket{SourceIP: enrichedSrcIP, DestIP: enrichedDestIP, Size: msg.Size, TimeStamp: time}
+	enrichedMessage := common.EnrichedPacket{SourceIP: enrichedSrcIP, DestIP: enrichedDestIP, Size: msg.Size, TimeStamp: date}
 
 	jsonString, err := json.Marshal(enrichedMessage)
 	if err != nil {
